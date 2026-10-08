@@ -1,0 +1,198 @@
+%YAML:1.0
+
+#--------------------------------------------------------------------------------------------
+# XREAL Glass cam0+cam1+imu0 — TagFusion stereo-inertial
+# Dataset: q3hy/20260819/ror_pat_led_f (SN L623X00088)
+# Sequences: 01-1 / 01-2 / 01-3  （三序列 camera 段标定相同，共用本文件）
+#
+# Path layout（与 stereo_inertial_xreal_glass_tag 搜索逻辑兼容）:
+#   /home/geneta/dataset/ror_pat_led_f/01-1
+#   /home/geneta/dataset/ror_pat_led_f/01-1/raw_data/glass
+#   /home/geneta/dataset/ror_pat_led_f/01-1/raw_data/glass/cam0/images
+#
+# Resolved as:
+#   .../raw_data/glass/cam0/images  +  .../raw_data/glass/cam1/images
+#   .../raw_data/glass/imu0.txt
+#   timestamps.txt: "m0000000.pgm <t>"（左右同名）
+#   imu0.txt: "<t> <temp> gx gy gz ax ay az"  （rad/s, m/s^2）
+#
+# Intrinsics / extrinsics from:
+#   .../01-1/ground_truth/calib/calib.yaml  （calibration: 20260819）
+# Camera.model: fisheye6202 → ORB-SLAM3 KannalaBrandt8 使用 kc[0:4] 近似
+# Stereo.T_c1_c2 由 cam0_q_cam1 (Hamilton qx,qy,qz,qw) + cam0_p_cam1 构成
+# IMU.T_b_c1 由 cam0 的 imu_q_cam / imu_p_cam 构成（body = imu0）
+# Resolution (W x H): 640 x 512
+# Camera FPS: ~60
+# IMU: imu0.txt 实测 ~1000 Hz
+#
+# 运行:
+#   SETTINGS=./ror_pat_led_f_stereo+imu.yaml ./run_xreal_glass_stereo_inertial.sh \
+#     /home/geneta/dataset/ror_pat_led_f/01-1/raw_data/glass
+#
+# IMU bias：calib.yaml 有 acc_bias / gyr_bias，但 ORB-SLAM3 yaml 无对应字段，
+# 运行时从 0 开始在 InitializeIMU 中估计，无法直接写入本文件。
+#--------------------------------------------------------------------------------------------
+
+File.version: "1.0"
+
+System.saveOnlinePose: 1
+System.saveOnlinePoseFile: "OnlineCameraTrajectory.txt"
+
+#--------------------------------------------------------------------------------------------
+# Camera Parameters
+#--------------------------------------------------------------------------------------------
+Camera.type: "KannalaBrandt8"
+
+# Left = cam0
+Camera1.fx: 238.4806428135
+Camera1.fy: 238.5621643051
+Camera1.cx: 324.7702989146
+Camera1.cy: 243.6502634287
+
+Camera1.k1: -5.491123172128348e-05
+Camera1.k2:  0.011212737417956399
+Camera1.k3: -0.018880440224839947
+Camera1.k4:  0.016386700289595588
+
+# Right = cam1
+Camera2.fx: 238.2168274899
+Camera2.fy: 238.3644232045
+Camera2.cx: 316.6551985374
+Camera2.cy: 266.6338839078
+
+Camera2.k1:  0.0023409802611956436
+Camera2.k2:  0.004635278371005007
+Camera2.k3: -0.010441359485823505
+Camera2.k4:  0.01047052509650125
+
+Camera.width: 640
+Camera.height: 512
+
+# timestamps 相邻约 0.01667s
+Camera.fps: 60
+
+Camera.RGB: 1
+
+Camera1.overlappingBegin: 0
+Camera1.overlappingEnd: 639
+Camera2.overlappingBegin: 0
+Camera2.overlappingEnd: 639
+
+Stereo.ThDepth: 40.0
+
+# T_c1_c2：左相机(cam0)系下右相机(cam1)位姿；基线约 0.1375 m
+Stereo.T_c1_c2: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: f
+   data: [ 0.982299162769100,  0.011611107562042,  0.186958650520129,  0.137005449901940,
+          -0.012049692647158,  0.999926668187590,  0.001209609182665, -0.000234824009136,
+          -0.186930895601113, -0.003440992363904,  0.982367039268581, -0.012086717580324,
+           0.0, 0.0, 0.0, 1.0]
+
+#--------------------------------------------------------------------------------------------
+# IMU Parameters  （body = imu0；T_b_c1 = calib.yaml cam0 的 imu_q_cam / imu_p_cam）
+# imu0.txt 实测约 1000 Hz（mean dt=0.001s）
+# 噪声与 calib.yaml imu_noises 一致：
+#   [gyro_sigma, gyro_walk, accel_sigma, accel_walk]
+#--------------------------------------------------------------------------------------------
+IMU.T_b_c1: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: f
+   data: [ 0.999759541355626, -0.019215584348510,  0.010565073900975, -0.008587994522420,
+          -0.019199082583889, -0.999814300684732, -0.001661136429417,  0.002744266044203,
+           0.010595031681160,  0.001457897268473, -0.999942808284169, -0.005211090178361,
+           0.0, 0.0, 0.0, 1.0]
+
+IMU.NoiseGyro: 3.5e-04
+IMU.NoiseAcc: 6.67e-03
+IMU.GyroWalk: 1.0e-05
+IMU.AccWalk: 6.8e-04
+IMU.Frequency: 1000.0
+IMU.InsertKFsWhenLost: 1
+
+#--------------------------------------------------------------------------------------------
+# ORB Parameters
+#--------------------------------------------------------------------------------------------
+ORBextractor.nFeatures: 1200
+ORBextractor.scaleFactor: 1.2
+ORBextractor.nLevels: 8
+ORBextractor.iniThFAST: 20
+ORBextractor.minThFAST: 7
+
+#--------------------------------------------------------------------------------------------
+# Viewer Parameters
+# 离线串行模式下不启动 Pangolin Viewer 线程；Viewer.enable / 下列 3D 参数均被忽略。
+# 图像窗请用下面的 Tag.show_in_orb_viewer（主线程 cv::imshow，只变慢、不改变串行顺序）。
+#--------------------------------------------------------------------------------------------
+Viewer.enable: 1
+Viewer.KeyFrameSize: 0.05
+Viewer.KeyFrameLineWidth: 1.0
+Viewer.GraphLineWidth: 0.9
+Viewer.PointSize: 2.0
+Viewer.CameraSize: 0.08
+Viewer.CameraLineWidth: 2.0
+Viewer.ViewpointX: 0.0
+Viewer.ViewpointY: -0.5
+Viewer.ViewpointZ: -1.2
+Viewer.ViewpointF: 500.0
+Viewer.imageViewScale: 1.0
+Viewer.showTagMap: 1
+Viewer.showTagKFs: 1
+
+#--------------------------------------------------------------------------------------------
+# Tag Parameters
+#--------------------------------------------------------------------------------------------
+Tag.enable: 1
+Tag.family: "tag36h11"
+Tag.hamming: 2
+Tag.black_border: 1
+Tag.size: 0.144
+Tag.gamma: 0.5                  # <1 提亮暗部；1=关闭。已取消 CLAHE
+Tag.verbose: 1
+Tag.export: 1
+Tag.export_dir: "tag_export"   # 定标写 init CSV；Shutdown 写终局 orb_final_*.csv / *_final_keyframes_tum.txt / final_map.ply
+Tag.viewer: 0                   # 离线模式下忽略（TagViewer 线程不启动）
+Tag.save_vis: 0
+Tag.save_vis_dir: "tag_vis"
+Tag.show_in_orb_viewer: 1       # 1=主线程 imshow：Current Frame（ORB+Tag）+ Tag Detect；不启 Pangolin
+
+# ========================== local BA配置 ==========================
+Tag.pose_optimization: 1   # 纯视觉 PoseOptimization 与惯性 PoseInertial* 共用（运行时只走当前传感器对应的一条分支）
+Tag.corner_sigma: 2.0
+Tag.min_inlier_corners: 3
+Tag.fixed_only: 0
+Tag.local_ba.enable: 1
+Tag.local_ba.optimize_active: 1
+Tag.local_ba.corner_sigma: 2.0
+Tag.local_ba.min_inlier_corners: 3
+Tag.local_ba.verbose: 1
+
+# ========================== 角点因子自适应权重配置 ==========================
+Tag.factor_weight.enable: 1
+Tag.factor_weight.alpha: 3.0          # Tag / feature 基础权重比
+Tag.factor_weight.s_sat: 400.0        # 基本满权面积 px^2
+Tag.factor_weight.lambda_s: 3.0
+Tag.factor_weight.theta0_deg: 60.0    # 视角特征尺度
+Tag.factor_weight.lambda_theta: 1.0
+Tag.factor_weight.phi0_deg: 15.0      # IPPE 双解显著旋转差
+Tag.factor_weight.e0: 1.0             # 双解 residual 区分尺度 px
+Tag.factor_weight.lambda_amb: 0.0         # 0=关闭双解项（w_amb≡1）
+Tag.factor_weight.w_min: 0.001
+Tag.factor_weight.verbose: 1          # 1=打印 S,θ,Δφ,Δe 与各分项权重
+
+# ========================== 回环配置 ==========================
+Tag.loop.enable: 1
+Tag.loop.min_history_observations: 2
+Tag.loop.min_keyframe_gap: 30 # 历史回环 KF 与当前 KF 的最小 ID 间隔
+Tag.loop.min_reobservation_gap_kfs: 30 # 最近一次有效观测间隔；过小视为连续可见，不是重新观察
+Tag.loop.min_historical_kf_map_points: 20 # 历史 KF 至少需有这么多跟踪地图点
+Tag.loop.max_ippe_reprojection_error: 5.0 # IPPE解的重投影误差阈值
+Tag.loop.max_stereo_translation_error: 0.20 # 左右目当前相机位姿的位移差阈值
+Tag.loop.max_stereo_rotation_error: 0.20 # 左右目当前相机位姿旋转差阈值
+Tag.loop.max_roll_pitch_correction: 0.15 # Sim3修正的roll和pitch差阈值
+Tag.loop.max_yaw_correction: 1.57 # Sim3修正的yaw差阈值
+Tag.loop.min_consistent_tags: 1 # 至少需要多少个一致的Tag才能认为存在回环
+Tag.loop.reference_timeout_kfs: 4 # 连续若干 KF 未见该 Tag 则清除冻结回环参考
+Tag.loop.verbose: 1

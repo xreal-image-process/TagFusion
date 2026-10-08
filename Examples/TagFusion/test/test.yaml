@@ -1,0 +1,184 @@
+%YAML:1.0
+
+#--------------------------------------------------------------------------------------------
+# System config
+#--------------------------------------------------------------------------------------------
+
+# When the variables are commented, the system doesn't load a previous session or not store the current one
+
+# If the LoadFile doesn't exist, the system give a message and create a new Atlas from scratch
+#System.LoadAtlasFromFile: "Session_MH01_MH02_MH03_Stereo60_Pseudo"
+
+# The store file is created from the current session, if a file with the same name exists it is deleted
+#System.SaveAtlasToFile: "Session_MH01_MH02_MH03_Stereo60_Pseudo"
+
+#--------------------------------------------------------------------------------------------
+# Camera Parameters. Adjust them!
+#--------------------------------------------------------------------------------------------
+File.version: "1.0"
+
+Camera.type: "PinHole"
+
+# Camera calibration and distortion parameters (OpenCV) 
+# Tank short_test (from short_test.yaml): fx=fy=655, bf=78.89165891925023
+# baseline = bf/fx ≈ 0.120445 m
+Camera1.fx: 655.0
+Camera1.fy: 655.0
+Camera1.cx: 306.0
+Camera1.cy: 256.0
+
+Camera1.k1: 0.0
+Camera1.k2: 0.0
+Camera1.p1: 0.0
+Camera1.p2: 0.0
+
+# 数据集仅给左目内参；右目暂复用左目
+Camera2.fx: 655.0
+Camera2.fy: 655.0
+Camera2.cx: 306.0
+Camera2.cy: 256.0
+
+Camera2.k1: 0.0
+Camera2.k2: 0.0
+Camera2.p1: 0.0
+Camera2.p2: 0.0
+
+Camera.width: 612
+Camera.height: 512
+
+# Camera frames per second 
+Camera.fps: 20
+
+# Color order of the images (0: BGR, 1: RGB. It is ignored if images are grayscale)
+Camera.RGB: 1
+
+# Close/Far threshold. Baseline times.
+Stereo.ThDepth: 60.0
+# T_c1_c2：左相机系下右相机位姿；旋转近似单位阵，平移 x = bf/fx
+Stereo.T_c1_c2: !!opencv-matrix
+  rows: 4
+  cols: 4
+  dt: f
+  data: [1.0, 0.0, 0.0, 0.12044528109809199,
+         0.0, 1.0, 0.0, 0.0,
+         0.0, 0.0, 1.0, 0.0,
+         0.0, 0.0, 0.0, 1.0]
+
+# Transformation from camera 0 to body-frame (imu)
+IMU.T_b_c1: !!opencv-matrix
+  rows: 4
+  cols: 4
+  dt: f
+  data: [0.0148655429818, -0.999880929698, 0.00414029679422, -0.0216401454975,
+         0.999557249008, 0.0149672133247, 0.025715529948, -0.064676986768,
+         -0.0257744366974, 0.00375618835797, 0.999660727178, 0.00981073058949,
+         0.0, 0.0, 0.0, 1.0]
+
+# IMU noise
+IMU.NoiseGyro: 1.7e-04 # 1.6968e-04
+IMU.NoiseAcc: 2.0e-03 # 2.0000e-3
+IMU.GyroWalk: 1.9393e-05
+IMU.AccWalk: 3.e-03 # 3.0000e-3
+IMU.Frequency: 200.0
+
+#--------------------------------------------------------------------------------------------
+# ORB Parameters
+#--------------------------------------------------------------------------------------------
+
+# ORB Extractor: Number of features per image
+ORBextractor.nFeatures: 1200
+
+# ORB Extractor: Scale factor between levels in the scale pyramid 	
+ORBextractor.scaleFactor: 1.2
+
+# ORB Extractor: Number of levels in the scale pyramid	
+ORBextractor.nLevels: 8
+
+# ORB Extractor: Fast threshold
+# Image is divided in a grid. At each cell FAST are extracted imposing a minimum response.
+# Firstly we impose iniThFAST. If no corners are detected we impose a lower value minThFAST
+# You can lower these values if your images have low contrast			
+ORBextractor.iniThFAST: 20
+ORBextractor.minThFAST: 7
+
+#--------------------------------------------------------------------------------------------
+# Viewer Parameters
+#--------------------------------------------------------------------------------------------
+# Viewer.enable: 有则覆盖 System 构造参数；原先默认开启
+Viewer.enable: 1
+# 原先默认 KeyFrameSize=0.05, CameraSize=0.08（归一化尺度）；Tag 米制下建议缩小
+Viewer.KeyFrameSize: 0.01
+Viewer.KeyFrameLineWidth: 1.0
+Viewer.GraphLineWidth: 0.9
+Viewer.PointSize: 2.0
+Viewer.CameraSize: 0.015
+Viewer.CameraLineWidth: 3.0
+Viewer.ViewpointX: 0.0
+Viewer.ViewpointY: -0.7
+Viewer.ViewpointZ: -1.8
+Viewer.ViewpointF: 500.0
+Viewer.imageViewScale: 1.0
+Viewer.showTagMap: 1
+Viewer.showTagKFs: 1
+
+# 跟踪 OK 后每帧 append 一行 TUM（Twc）；0=关闭
+System.saveOnlinePose: 1
+System.saveOnlinePoseFile: "OnlineCameraTrajectory.txt"
+
+#--------------------------------------------------------------------------------------------
+# Tag Parameters  (backend: Thirdparty/apriltag ethz_apriltag2)
+#--------------------------------------------------------------------------------------------
+Tag.family: "tag36h11"          # tag36h11/tag36h9/tag25h9/tag25h7/tag16h5
+Tag.hamming: 2                  # 接受的最大 hammingDistance
+Tag.black_border: 1             # ethz TagDetector blackBorder（标准 tag 一般为 1）
+Tag.size: 0.16                  # Tag 边长（米），IPPE 用
+Tag.clahe: 1                    # 去畸变后、检测前 CLAHE
+Tag.clahe_clip_limit: 2.0
+Tag.clahe_tile_grid: 8
+Tag.verbose: 1
+Tag.export: 1
+Tag.export_dir: "tag_export"
+Tag.viewer: 0
+Tag.save_vis: 0                 # 1=每帧保存 Tag 检测图到 Tag.save_vis_dir
+Tag.save_vis_dir: "tag_vis"
+Tag.show_in_orb_viewer: 1       # 1=ORB Current Frame 叠加 Tag；双目并排左右
+
+# ========================== local BA配置 ==========================
+Tag.pose_optimization: 1   # 纯视觉 PoseOptimization 与惯性 PoseInertial* 共用（运行时只走当前传感器对应的一条分支）
+Tag.corner_sigma: 2.0           # Tag 角点像素 sigma，Ω=1/σ² I
+Tag.min_inlier_corners: 3       # 每相机每 Tag 至少 N 个角点内点才保留
+Tag.fixed_only: 0               # 1=仅 FIXED_ANCHOR参与优化
+Tag.local_ba.enable: 1
+Tag.local_ba.optimize_active: 1
+Tag.local_ba.corner_sigma: 2.0
+Tag.local_ba.min_inlier_corners: 3
+Tag.local_ba.verbose: 1
+
+# ========================== 角点因子自适应权重配置 ==========================
+Tag.factor_weight.enable: 0
+Tag.factor_weight.alpha: 3.0          # Tag / feature 基础权重比
+Tag.factor_weight.s_sat: 400.0        # 基本满权面积 px^2
+Tag.factor_weight.lambda_s: 3.0
+Tag.factor_weight.theta0_deg: 60.0    # 视角特征尺度
+Tag.factor_weight.lambda_theta: 1.0
+Tag.factor_weight.phi0_deg: 15.0      # IPPE 双解显著旋转差
+Tag.factor_weight.e0: 1.0             # 双解 residual 区分尺度 px
+Tag.factor_weight.lambda_amb: 0.0         # 0=关闭双解项（w_amb≡1）
+Tag.factor_weight.w_min: 0.001
+Tag.factor_weight.verbose: 0          # 1=打印 S,θ,Δφ,Δe 与各分项权重
+
+# ========================== 回环配置 ==========================
+Tag.loop.enable: 1
+Tag.loop.min_history_observations: 2
+Tag.loop.min_keyframe_gap: 30 # 历史回环 KF 与当前 KF 的最小 ID 间隔
+Tag.loop.min_reobservation_gap_kfs: 30 # 最近一次有效观测间隔；过小视为连续可见，不是重新观察
+Tag.loop.min_historical_kf_map_points: 20 # 历史 KF 至少需有这么多跟踪地图点
+Tag.loop.max_ippe_reprojection_error: 5.0 # IPPE解的重投影误差阈值
+Tag.loop.max_stereo_translation_error: 0.20 # 左右目当前相机位姿的位移差阈值
+Tag.loop.max_stereo_rotation_error: 0.20 # 左右目当前相机位姿旋转差阈值
+Tag.loop.max_roll_pitch_correction: 0.15 # Sim3修正的roll和pitch差阈值
+Tag.loop.max_yaw_correction: 1.57 # Sim3修正的yaw差阈值
+Tag.loop.min_consistent_tags: 1 # 至少需要多少个一致的Tag才能认为存在回环
+Tag.loop.reference_timeout_kfs: 4 # 连续若干 KF 未见该 Tag 则清除冻结回环参考
+Tag.loop.verbose: 1
+
