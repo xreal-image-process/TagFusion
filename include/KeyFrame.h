@@ -301,6 +301,8 @@ public:
 
     // Set/check bad flag
     void SetBadFlag();
+    // True when SetBadFlag would parent a keyframe to itself. Caller must keep the KF.
+    bool CheckSelfParentOnCull();
     bool isBad();
 
     // Tag metric initialization: fix the pose so later BA does not drift the scale

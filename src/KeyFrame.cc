@@ -719,6 +719,75 @@ void KeyFrame::SetErase()
     }
 }
 
+bool KeyFrame::CheckSelfParentOnCull()
+{
+    unique_lock<mutex> lock_connection(mMutexConnections);
+    if (mnId == mpMap->GetInitKFid() || mbNotErase)
+        return false;
+
+    // Same parent assignment as SetBadFlag, without changing the tree.
+    set<KeyFrame *> remaining_children = mspChildrens;
+    set<KeyFrame *> parent_candidates;
+    if (mpParent)
+        parent_candidates.insert(mpParent);
+
+    while (!remaining_children.empty())
+    {
+        bool has_candidate_link = false;
+        int max_weight = -1;
+        KeyFrame *selected_child = static_cast<KeyFrame *>(NULL);
+        KeyFrame *selected_parent = static_cast<KeyFrame *>(NULL);
+
+        for (set<KeyFrame *>::iterator child_it = remaining_children.begin();
+             child_it != remaining_children.end(); child_it++)
+        {
+            KeyFrame *child_key_frame = *child_it;
+            // child_key_frame == this would lock mMutexConnections twice inside isBad / GetWeight.
+            if (!child_key_frame || child_key_frame == this || child_key_frame->isBad())
+                continue;
+
+            vector<KeyFrame *> connected_key_frames =
+                child_key_frame->GetVectorCovisibleKeyFrames();
+            for (size_t i = 0; i < connected_key_frames.size(); i++)
+            {
+                KeyFrame *covisible_key_frame = connected_key_frames[i];
+                if (!covisible_key_frame)
+                    continue;
+                for (set<KeyFrame *>::iterator candidate_it = parent_candidates.begin();
+                     candidate_it != parent_candidates.end(); candidate_it++)
+                {
+                    if ((*candidate_it) && covisible_key_frame->mnId == (*candidate_it)->mnId)
+                    {
+                        int weight = child_key_frame->GetWeight(covisible_key_frame);
+                        if (weight > max_weight)
+                        {
+                            selected_child = child_key_frame;
+                            selected_parent = covisible_key_frame;
+                            max_weight = weight;
+                            has_candidate_link = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!has_candidate_link)
+            break;
+        if (selected_child == selected_parent)
+            return true;
+        parent_candidates.insert(selected_child);
+        remaining_children.erase(selected_child);
+    }
+
+    for (set<KeyFrame *>::iterator child_it = remaining_children.begin();
+         child_it != remaining_children.end(); child_it++)
+    {
+        if (*child_it && *child_it == mpParent)
+            return true;
+    }
+    return false;
+}
+
 void KeyFrame::SetBadFlag()
 {
     {
@@ -733,6 +802,10 @@ void KeyFrame::SetBadFlag()
             return;
         }
     }
+
+    // Reparenting would make a keyframe its own parent. Keep this KF and its observations.
+    if (CheckSelfParentOnCull())
+        return;
 
     for(map<KeyFrame*,int>::iterator mit = mConnectedKeyFrameWeights.begin(), mend=mConnectedKeyFrameWeights.end(); mit!=mend; mit++)
     {

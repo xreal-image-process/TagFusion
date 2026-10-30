@@ -1050,7 +1050,8 @@ void Optimizer::FullInertialBA(Map *pMap, int its, const bool bFixLocal, const l
         VertexPose* VP = static_cast<VertexPose*>(optimizer.vertex(pKFi->mnId));
         if(nLoopId==0)
         {
-            Sophus::SE3f Tcw(VP->estimate().Rcw[0].cast<float>(), VP->estimate().tcw[0].cast<float>());
+            Sophus::SE3f Tcw(NormalizeRotation(VP->estimate().Rcw[0]).cast<float>(),
+                             VP->estimate().tcw[0].cast<float>());
             pKFi->SetPose(Tcw);
         }
         else
@@ -4281,7 +4282,8 @@ void Optimizer::LocalInertialBA(KeyFrame *pKF, bool *pbStopFlag, Map *pMap, int&
         KeyFrame* pKFi = vpOptimizableKFs[i];
 
         VertexPose* VP = static_cast<VertexPose*>(optimizer.vertex(pKFi->mnId));
-        Sophus::SE3f Tcw(VP->estimate().Rcw[0].cast<float>(), VP->estimate().tcw[0].cast<float>());
+        Sophus::SE3f Tcw(NormalizeRotation(VP->estimate().Rcw[0]).cast<float>(),
+                         VP->estimate().tcw[0].cast<float>());
         if(tagParams.verbose)
             vPoseDeltas.push_back(ComputeLocalBAPoseDelta(pKFi, pKFi->GetPose(), Tcw));
         pKFi->SetPose(Tcw);
@@ -4305,7 +4307,8 @@ void Optimizer::LocalInertialBA(KeyFrame *pKF, bool *pbStopFlag, Map *pMap, int&
     {
         KeyFrame* pKFi = *it;
         VertexPose* VP = static_cast<VertexPose*>(optimizer.vertex(pKFi->mnId));
-        Sophus::SE3f Tcw(VP->estimate().Rcw[0].cast<float>(), VP->estimate().tcw[0].cast<float>());
+        Sophus::SE3f Tcw(NormalizeRotation(VP->estimate().Rcw[0]).cast<float>(),
+                         VP->estimate().tcw[0].cast<float>());
         if(tagParams.verbose)
             vPoseDeltas.push_back(ComputeLocalBAPoseDelta(pKFi, pKFi->GetPose(), Tcw));
         pKFi->SetPose(Tcw);
@@ -5845,7 +5848,8 @@ void Optimizer::MergeInertialBA(KeyFrame* pCurrKF, KeyFrame* pMergeKF, bool *pbS
         KeyFrame* pKFi = vpOptimizableKFs[i];
 
         VertexPose* VP = static_cast<VertexPose*>(optimizer.vertex(pKFi->mnId));
-        Sophus::SE3f Tcw(VP->estimate().Rcw[0].cast<float>(), VP->estimate().tcw[0].cast<float>());
+        Sophus::SE3f Tcw(NormalizeRotation(VP->estimate().Rcw[0]).cast<float>(),
+                         VP->estimate().tcw[0].cast<float>());
         pKFi->SetPose(Tcw);
 
         Sophus::SE3d Tiw = pKFi->GetPose().cast<double>();
@@ -5869,7 +5873,8 @@ void Optimizer::MergeInertialBA(KeyFrame* pCurrKF, KeyFrame* pMergeKF, bool *pbS
         KeyFrame* pKFi = vpOptimizableCovKFs[i];
 
         VertexPose* VP = static_cast<VertexPose*>(optimizer.vertex(pKFi->mnId));
-        Sophus::SE3f Tcw(VP->estimate().Rcw[0].cast<float>(), VP->estimate().tcw[0].cast<float>());
+        Sophus::SE3f Tcw(NormalizeRotation(VP->estimate().Rcw[0]).cast<float>(),
+                         VP->estimate().tcw[0].cast<float>());
         pKFi->SetPose(Tcw);
 
         Sophus::SE3d Tiw = pKFi->GetPose().cast<double>();
